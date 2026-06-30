@@ -1,0 +1,63 @@
+rules_version = '2';
+
+// PBHS '86 Reunion — public-facing donation/order rules.
+// Pattern: individual donation/order documents are write-only from the public
+// client. Public reads happen only against an aggregate doc at /stats/fundraiser
+// so the progress bar can subscribe without exposing donor PII.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Orders (T-shirt purchases) ────────────────────────────────────────
+    match /orders/{orderId} {
+      allow read: if false;
+      allow create: if isValidOrder(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    // ── Donations (fundraiser + auction) ──────────────────────────────────
+    match /donations/{donationId} {
+      allow read: if false;
+      allow create: if isValidDonation(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    // ── Public fundraiser aggregate (only doc that allows public reads) ──
+    // The `total` field is incremented client-side after a successful donation.
+    // We can't fully prevent forged increments without a Cloud Function, so
+    // treat this as best-effort and reconcile from /donations server-side.
+    match /stats/fundraiser {
+      allow read: if true;
+      allow write: if request.resource.data.keys().hasOnly(['total', 'updatedAt'])
+                   && request.resource.data.total is number
+                   && request.resource.data.total >= 0;
+    }
+
+    // Everything else: locked down by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+function isValidOrder(data) {
+  return data.keys().hasAll(['name', 'email', 'phone', 'size', 'quantity', 'amount', 'paypalOrderId', 'status', 'timestamp'])
+      && data.name is string && data.name.size() > 0 && data.name.size() < 200
+      && data.email is string && data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+      && data.phone is string && data.phone.size() > 0 && data.phone.size() < 40
+      && data.size in ['S', 'M', 'L', 'XL', 'XXL']
+      && data.quantity is int && data.quantity > 0 && data.quantity <= 20
+      && data.amount is number && data.amount > 0
+      && data.paypalOrderId is string && data.paypalOrderId.size() > 0
+      && data.status == 'paid';
+}
+
+function isValidDonation(data) {
+  return data.keys().hasAll(['name', 'email', 'phone', 'amount', 'type', 'paypalOrderId', 'timestamp'])
+      && data.name is string && data.name.size() > 0 && data.name.size() < 200
+      && data.email is string && data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+      && data.phone is string && data.phone.size() > 0 && data.phone.size() < 40
+      && data.amount is number && data.amount > 0
+      && data.type in ['fundraiser', 'auction']
+      && data.paypalOrderId is string && data.paypalOrderId.size() > 0
+      && (!('message' in data) || (data.message is string && data.message.size() < 2000));
+}

@@ -15,6 +15,8 @@ export default function Navbar() {
   const navLinks = [
     { to: '/', label: 'Home' },
     { to: '/events', label: 'Events' },
+    { to: '/store', label: 'Store' },
+    { to: '/donate', label: 'Donate' },
   ]
 
   const linkClass = ({ isActive }) =>

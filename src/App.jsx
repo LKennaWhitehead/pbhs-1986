@@ -5,6 +5,8 @@ import Footer from './components/Footer'
 import HomePage from './pages/HomePage'
 import EventsPage from './pages/EventsPage'
 import RegisterPage from './pages/RegisterPage'
+import Store from './pages/Store'
+import Donate from './pages/Donate'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -25,6 +27,8 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/events" element={<EventsPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/store" element={<Store />} />
+            <Route path="/donate" element={<Donate />} />
           </Routes>
         </main>
         <Footer />
