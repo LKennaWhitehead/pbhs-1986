@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    color: #1A1A1A;
+    background-color: #FAFAFA;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+  }
+
+  .glass-dark {
+    background: rgba(15, 15, 15, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-accent text-white font-body font-semibold px-8 py-3.5 rounded-lg hover:bg-accent-dark transition-all duration-200 text-base cursor-pointer shadow-sm hover:shadow-md;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 border-2 border-white text-white font-body font-semibold px-8 py-3.5 rounded-lg hover:bg-white hover:text-primary transition-all duration-200 text-base cursor-pointer;
+  }
+
+  .section-badge {
+    @apply inline-flex items-center gap-2 bg-accent/10 border border-accent/25 text-accent text-xs font-body font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full;
+  }
+}
+
+@layer utilities {
+  .zebra-stripe {
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(0, 0, 0, 0.025) 10px,
+      rgba(0, 0, 0, 0.025) 20px
+    );
+  }
+
+  .red-divider {
+    height: 2px;
+    background: linear-gradient(to right, transparent, #C8102E, transparent);
+  }
+}
