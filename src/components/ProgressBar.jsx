@@ -1,4 +1,4 @@
-export default function ProgressBar({ current, goal, label }) {
+export default function ProgressBar({ current, goal, pending = 0, label }) {
   const pct = goal > 0 ? Math.min(100, Math.round((current / goal) * 100)) : 0
 
   return (
@@ -29,7 +29,14 @@ export default function ProgressBar({ current, goal, label }) {
         />
       </div>
 
-      {label && <p className="text-xs font-body text-muted mt-3">{label}</p>}
+      <div className="flex items-center justify-between mt-3 gap-3 flex-wrap">
+        {label && <p className="text-xs font-body text-muted">{label}</p>}
+        {pending > 0 && (
+          <p className="text-xs font-body text-muted">
+            + <span className="text-primary font-semibold">${pending.toLocaleString()}</span> pending verification
+          </p>
+        )}
+      </div>
     </div>
   )
 }

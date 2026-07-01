@@ -3,15 +3,16 @@ import { Heart, Gavel, Check, AlertTriangle } from 'lucide-react'
 import {
   addDoc,
   collection,
-  doc,
-  increment,
   onSnapshot,
+  query,
   serverTimestamp,
-  setDoc,
+  where,
 } from 'firebase/firestore'
 import { db, firebaseConfigured } from '../lib/firebase'
-import DonorForm, { donorFormValid } from '../components/DonorForm'
-import PayPalCheckout from '../components/PayPalCheckout'
+import ContactForm, { contactFormValid } from '../components/ContactForm'
+import PaymentMethodSelector from '../components/PaymentMethodSelector'
+import CashAppPanel from '../components/CashAppPanel'
+import ZellePanel from '../components/ZellePanel'
 import ProgressBar from '../components/ProgressBar'
 import zebraBg from '../assets/zebra_print_background.jpg'
 import zebraHeader from '../assets/zebra_header.png'
@@ -20,12 +21,18 @@ const FUNDRAISER_GOAL = 1986
 const PRESETS = [10, 25, 50, 100]
 
 export default function Donate() {
-  const [fundraiserTotal, setFundraiserTotal] = useState(0)
+  const [verifiedTotal, setVerifiedTotal] = useState(0)
 
   useEffect(() => {
     if (!firebaseConfigured || !db) return
-    const unsub = onSnapshot(doc(db, 'stats', 'fundraiser'), (snap) => {
-      setFundraiserTotal(snap.exists() ? snap.data().total || 0 : 0)
+    const q = query(
+      collection(db, 'donations'),
+      where('type', '==', 'fundraiser'),
+      where('status', '==', 'verified'),
+    )
+    const unsub = onSnapshot(q, (snap) => {
+      const total = snap.docs.reduce((sum, d) => sum + (Number(d.data().amount) || 0), 0)
+      setVerifiedTotal(total)
     })
     return unsub
   }, [])
@@ -41,29 +48,23 @@ export default function Donate() {
         <div className="absolute inset-0 bg-cream/93" />
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
 
-          {/* Section 1 — Fundraiser */}
           <DonationSection
             type="fundraiser"
             badge="Class Fundraiser"
             title="Help us hit $1,986"
             icon={<Heart size={20} className="text-accent" />}
             description="Every dollar covers reunion logistics, the welcome reception, classmate scholarships, and the legacy gift to PBHS. Goal is a nod to our graduating year."
-            ctaLabel="Donate"
-            paypalDescription={(amt) => `PBHS '86 Reunion fundraiser donation ($${amt.toFixed(2)})`}
-            extra={<ProgressBar current={fundraiserTotal} goal={FUNDRAISER_GOAL} label="Updated live as donations come in" />}
-            updateAggregate
+            ctaLabel="Submit Donation"
+            extra={<ProgressBar current={verifiedTotal} goal={FUNDRAISER_GOAL} label="Verified donations only" />}
           />
 
-          {/* Section 2 — Silent Auction */}
           <DonationSection
             type="auction"
             badge="Silent Auction"
             title="Contribute to the silent auction"
             icon={<Gavel size={20} className="text-accent" />}
             description="Bid alongside classmates on themed baskets, Pine Bluff getaways, and Zebra memorabilia. All proceeds support the reunion fund."
-            ctaLabel="Contribute to Auction"
-            paypalDescription={(amt) => `PBHS '86 Silent Auction contribution ($${amt.toFixed(2)})`}
-            requireMessage={false}
+            ctaLabel="Submit Contribution"
           />
         </div>
       </section>
@@ -71,31 +72,32 @@ export default function Donate() {
   )
 }
 
-function DonationSection({
-  type,
-  badge,
-  title,
-  icon,
-  description,
-  ctaLabel,
-  paypalDescription,
-  extra,
-  updateAggregate = false,
-}) {
+function DonationSection({ type, badge, title, icon, description, ctaLabel, extra }) {
   const [selected, setSelected] = useState(25)
   const [custom, setCustom] = useState('')
-  const [donor, setDonor] = useState({ name: '', email: '', phone: '', message: '' })
-  const [showCheckout, setShowCheckout] = useState(false)
-  const [confirmation, setConfirmation] = useState(null)
+  const [paymentMethod, setPaymentMethod] = useState('cashapp')
+  const [donor, setDonor] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    message: '',
+    confirmationNote: '',
+  })
+  const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
+  const [confirmation, setConfirmation] = useState(null)
 
   const customAmount = parseFloat(custom)
   const amount = custom ? (Number.isFinite(customAmount) ? customAmount : 0) : selected
   const amountValid = amount > 0
-  const formReady = donorFormValid(donor)
+  const formReady = contactFormValid(donor)
 
-  async function handleApprove({ paypalOrderId }) {
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!formReady || !amountValid || submitting) return
+    setSubmitting(true)
     setSubmitError(null)
+
     const donation = {
       name: donor.name.trim(),
       email: donor.email.trim(),
@@ -103,28 +105,26 @@ function DonationSection({
       message: donor.message?.trim() || '',
       amount,
       type,
-      paypalOrderId,
+      paymentMethod,
+      confirmationNote: donor.confirmationNote?.trim() || '',
+      status: 'pending',
       timestamp: serverTimestamp(),
     }
 
-    if (firebaseConfigured && db) {
-      try {
-        await addDoc(collection(db, 'donations'), donation)
-        if (updateAggregate) {
-          await setDoc(
-            doc(db, 'stats', 'fundraiser'),
-            { total: increment(amount), updatedAt: serverTimestamp() },
-            { merge: true },
-          )
-        }
-      } catch (err) {
-        setSubmitError(
-          'Payment captured, but we could not save your donation. Please email us your PayPal order ID: ' +
-            paypalOrderId,
-        )
-      }
+    if (!firebaseConfigured || !db) {
+      setSubmitError('Firebase is not configured. Add your Firebase env vars and reload.')
+      setSubmitting(false)
+      return
     }
-    setConfirmation({ ...donation, paypalOrderId })
+
+    try {
+      await addDoc(collection(db, 'donations'), donation)
+      setConfirmation(donation)
+    } catch (err) {
+      setSubmitError(err?.message || 'Could not save your donation. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (confirmation) {
@@ -133,115 +133,115 @@ function DonationSection({
         <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-5">
           <Check size={24} className="text-accent" />
         </div>
-        <h3 className="font-display font-bold text-2xl text-primary mb-2">Thank you, {confirmation.name.split(' ')[0]}!</h3>
-        <p className="font-body text-sm text-muted mb-6">
-          Your {type === 'fundraiser' ? 'donation' : 'auction contribution'} of ${confirmation.amount.toFixed(2)} is in. A receipt has been sent to {confirmation.email}.
+        <h3 className="font-display font-bold text-2xl text-primary mb-2">
+          Thank you, {confirmation.name.split(' ')[0]}!
+        </h3>
+        <p className="font-body text-sm text-muted mb-2 leading-relaxed">
+          Your {type === 'fundraiser' ? 'donation' : 'auction contribution'} of{' '}
+          <span className="font-semibold text-primary">${confirmation.amount.toFixed(2)}</span> is <span className="font-semibold text-primary">pending</span>.
         </p>
-        <dl className="space-y-2 text-sm font-body border-t border-gray-100 pt-5">
-          <Row label="PayPal order" value={confirmation.paypalOrderId} mono />
-        </dl>
+        <p className="font-body text-sm text-muted leading-relaxed">
+          We'll update the total once we verify your{' '}
+          {confirmation.paymentMethod === 'cashapp' ? 'Cash App' : 'Zelle'} payment.
+        </p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-5">
-      <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-6 sm:p-8">
-        <div className="flex items-center gap-2 mb-3">
-          {icon}
-          <span className="text-xs font-body font-semibold uppercase tracking-widest text-accent">
-            {badge}
-          </span>
+    <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-card border border-gray-100 p-6 sm:p-8">
+      <div className="flex items-center gap-2 mb-3">
+        {icon}
+        <span className="text-xs font-body font-semibold uppercase tracking-widest text-accent">
+          {badge}
+        </span>
+      </div>
+      <h2 className="font-display font-bold text-2xl sm:text-3xl text-primary mb-3">{title}</h2>
+      <p className="font-body text-sm text-muted leading-relaxed mb-6">{description}</p>
+
+      {extra && <div className="mb-6">{extra}</div>}
+
+      <div className="mb-6">
+        <p className="block text-xs font-body font-semibold uppercase tracking-widest text-muted mb-3">
+          Amount
+        </p>
+        <div className="flex flex-wrap gap-2 mb-3">
+          {PRESETS.map((amt) => (
+            <button
+              key={amt}
+              type="button"
+              onClick={() => {
+                setSelected(amt)
+                setCustom('')
+              }}
+              className={`px-5 py-2.5 rounded-lg border font-body text-sm font-semibold transition-all duration-150 cursor-pointer ${
+                !custom && selected === amt
+                  ? 'bg-accent text-white border-accent shadow-sm'
+                  : 'bg-white text-primary border-gray-200 hover:border-accent'
+              }`}
+            >
+              ${amt}
+            </button>
+          ))}
         </div>
-        <h2 className="font-display font-bold text-2xl sm:text-3xl text-primary mb-3">{title}</h2>
-        <p className="font-body text-sm text-muted leading-relaxed mb-6">{description}</p>
-
-        {extra && <div className="mb-6">{extra}</div>}
-
-        {/* Preset + custom amount */}
-        <div className="mb-6">
-          <p className="block text-xs font-body font-semibold uppercase tracking-widest text-muted mb-3">
-            Amount
-          </p>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {PRESETS.map((amt) => (
-              <button
-                key={amt}
-                type="button"
-                onClick={() => {
-                  setSelected(amt)
-                  setCustom('')
-                }}
-                className={`px-5 py-2.5 rounded-lg border font-body text-sm font-semibold transition-all duration-150 cursor-pointer ${
-                  !custom && selected === amt
-                    ? 'bg-accent text-white border-accent shadow-sm'
-                    : 'bg-white text-primary border-gray-200 hover:border-accent'
-                }`}
-              >
-                ${amt}
-              </button>
-            ))}
-          </div>
-          <div className="relative max-w-xs">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-body text-sm">$</span>
-            <input
-              type="number"
-              min={1}
-              step="0.01"
-              value={custom}
-              onChange={(e) => setCustom(e.target.value)}
-              placeholder="Custom amount"
-              className="w-full pl-8 pr-4 py-3 rounded-lg border border-gray-200 bg-white font-body text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-150"
-            />
-          </div>
+        <div className="relative max-w-xs">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-body text-sm">$</span>
+          <input
+            type="number"
+            min={1}
+            step="0.01"
+            value={custom}
+            onChange={(e) => setCustom(e.target.value)}
+            placeholder="Custom amount"
+            className="w-full pl-8 pr-4 py-3 rounded-lg border border-gray-200 bg-white font-body text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-150"
+          />
         </div>
+      </div>
 
-        {!showCheckout ? (
-          <button
-            type="button"
-            onClick={() => setShowCheckout(true)}
-            disabled={!amountValid}
-            className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {ctaLabel}
-          </button>
+      <div className="mb-5">
+        <PaymentMethodSelector value={paymentMethod} onChange={setPaymentMethod} />
+      </div>
+
+      <div className="mb-6">
+        {paymentMethod === 'cashapp' ? (
+          <CashAppPanel
+            amount={amount}
+            instruction="After sending payment, complete the form below to confirm your donation."
+          />
         ) : (
-          <div className="space-y-6">
-            <div className="border-t border-gray-100 pt-6">
-              <p className="text-xs font-body font-semibold uppercase tracking-widest text-muted mb-4">
-                Your details
-              </p>
-              <DonorForm
-                values={donor}
-                onChange={setDonor}
-                includeMessage
-                idPrefix={`donate-${type}`}
-              />
-            </div>
-
-            <div className="border-t border-gray-100 pt-6">
-              <p className="text-xs font-body font-semibold uppercase tracking-widest text-muted mb-4">
-                Payment
-              </p>
-              <PayPalCheckout
-                amount={amount}
-                description={paypalDescription(amount)}
-                disabled={!formReady || !amountValid}
-                disabledMessage="Fill out your details to enable PayPal"
-                onApprove={handleApprove}
-              />
-            </div>
-
-            {submitError && (
-              <div className="flex items-start gap-3 bg-accent/5 border border-accent/30 rounded-lg p-4">
-                <AlertTriangle size={18} className="text-accent shrink-0 mt-0.5" />
-                <p className="text-xs font-body text-primary">{submitError}</p>
-              </div>
-            )}
-          </div>
+          <ZellePanel
+            instruction={`Open your banking app or Zelle app, send $${amount > 0 ? amount.toFixed(2) : '0.00'} to the contact above, then complete the form below to confirm your donation.`}
+          />
         )}
       </div>
-    </div>
+
+      <div className="border-t border-gray-100 pt-6 mb-6">
+        <p className="text-xs font-body font-semibold uppercase tracking-widest text-muted mb-4">
+          Confirm your donation
+        </p>
+        <ContactForm
+          values={donor}
+          onChange={setDonor}
+          includeMessage
+          idPrefix={`donate-${type}`}
+        />
+      </div>
+
+      {submitError && (
+        <div className="flex items-start gap-3 bg-accent/5 border border-accent/30 rounded-lg p-4 mb-4">
+          <AlertTriangle size={18} className="text-accent shrink-0 mt-0.5" />
+          <p className="text-xs font-body text-primary">{submitError}</p>
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={!formReady || !amountValid || submitting}
+        className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {submitting ? 'Submitting…' : ctaLabel}
+      </button>
+    </form>
   )
 }
 
@@ -265,14 +265,5 @@ function Header() {
         <div className="red-divider mt-8 max-w-xs mx-auto" />
       </div>
     </section>
-  )
-}
-
-function Row({ label, value, mono = false }) {
-  return (
-    <div className="flex justify-between gap-4">
-      <dt className="text-muted">{label}</dt>
-      <dd className={`text-primary text-right ${mono ? 'font-mono text-xs break-all' : 'font-medium'}`}>{value}</dd>
-    </div>
   )
 }

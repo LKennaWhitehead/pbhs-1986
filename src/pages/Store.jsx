@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react'
 import { Shirt, Check, AlertTriangle } from 'lucide-react'
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { db, firebaseConfigured } from '../lib/firebase'
-import DonorForm, { donorFormValid } from '../components/DonorForm'
-import PayPalCheckout from '../components/PayPalCheckout'
+import ContactForm, { contactFormValid } from '../components/ContactForm'
+import PaymentMethodSelector from '../components/PaymentMethodSelector'
+import CashAppPanel from '../components/CashAppPanel'
+import ZellePanel from '../components/ZellePanel'
 import zebraBg from '../assets/zebra_print_background.jpg'
 import zebraHeader from '../assets/zebra_header.png'
 
@@ -18,40 +20,53 @@ const SIZES = ['S', 'M', 'L', 'XL', 'XXL']
 export default function Store() {
   const [size, setSize] = useState('M')
   const [quantity, setQuantity] = useState(1)
-  const [showCheckout, setShowCheckout] = useState(false)
-  const [donor, setDonor] = useState({ name: '', email: '', phone: '' })
-  const [confirmation, setConfirmation] = useState(null)
+  const [paymentMethod, setPaymentMethod] = useState('cashapp')
+  const [contact, setContact] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    confirmationNote: '',
+  })
+  const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
+  const [confirmation, setConfirmation] = useState(null)
 
   const total = useMemo(() => SHIRT.price * quantity, [quantity])
-  const formReady = donorFormValid(donor)
+  const formReady = contactFormValid(contact)
 
-  async function handleApprove({ paypalOrderId }) {
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!formReady || submitting) return
+    setSubmitting(true)
     setSubmitError(null)
+
     const order = {
-      name: donor.name.trim(),
-      email: donor.email.trim(),
-      phone: donor.phone.trim(),
+      name: contact.name.trim(),
+      email: contact.email.trim(),
+      phone: contact.phone.trim(),
       size,
       quantity,
       amount: total,
-      paypalOrderId,
-      status: 'paid',
+      paymentMethod,
+      confirmationNote: contact.confirmationNote?.trim() || '',
+      status: 'pending',
       timestamp: serverTimestamp(),
     }
 
-    if (firebaseConfigured && db) {
-      try {
-        await addDoc(collection(db, 'orders'), order)
-      } catch (err) {
-        setSubmitError(
-          'Payment captured, but we could not save your order. Please email us your PayPal order ID: ' +
-            paypalOrderId,
-        )
-      }
+    if (!firebaseConfigured || !db) {
+      setSubmitError('Firebase is not configured. Add your Firebase env vars and reload.')
+      setSubmitting(false)
+      return
     }
 
-    setConfirmation({ ...order, paypalOrderId })
+    try {
+      await addDoc(collection(db, 'orders'), order)
+      setConfirmation(order)
+    } catch (err) {
+      setSubmitError(err?.message || 'Could not save your order. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (confirmation) return <Confirmation order={confirmation} />
@@ -67,7 +82,6 @@ export default function Store() {
         <div className="absolute inset-0 bg-cream/93" />
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-5 gap-8">
 
-          {/* Product */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-card border border-gray-100 overflow-hidden">
               <div className="aspect-square bg-gradient-to-br from-primary to-charcoal flex items-center justify-center">
@@ -92,13 +106,16 @@ export default function Store() {
             </div>
           </div>
 
-          {/* Order form */}
           <div className="lg:col-span-3">
-            <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-6 sm:p-8">
+            <form
+              onSubmit={handleSubmit}
+              className="bg-white rounded-2xl shadow-card border border-gray-100 p-6 sm:p-8"
+            >
               <h3 className="font-display font-bold text-2xl text-primary mb-1">Order details</h3>
-              <p className="font-body text-sm text-muted mb-6">Pick a size and quantity, then check out with PayPal.</p>
+              <p className="font-body text-sm text-muted mb-6">
+                Pick a size and quantity, send payment, then submit the confirmation below.
+              </p>
 
-              {/* Size */}
               <div className="mb-5">
                 <p className="block text-xs font-body font-semibold uppercase tracking-widest text-muted mb-3">
                   Size
@@ -121,7 +138,6 @@ export default function Store() {
                 </div>
               </div>
 
-              {/* Quantity */}
               <div className="mb-6">
                 <label htmlFor="qty" className="block text-xs font-body font-semibold uppercase tracking-widest text-muted mb-3">
                   Quantity
@@ -163,45 +179,45 @@ export default function Store() {
                 <span className="font-display font-bold text-2xl text-primary">${total.toFixed(2)}</span>
               </div>
 
-              {!showCheckout ? (
-                <button
-                  type="button"
-                  onClick={() => setShowCheckout(true)}
-                  className="btn-primary w-full"
-                >
-                  Buy Now
-                </button>
-              ) : (
-                <div className="space-y-6">
-                  <div className="border-t border-gray-100 pt-6">
-                    <p className="text-xs font-body font-semibold uppercase tracking-widest text-muted mb-4">
-                      Your details
-                    </p>
-                    <DonorForm values={donor} onChange={setDonor} idPrefix="store" />
-                  </div>
+              <div className="mb-5">
+                <PaymentMethodSelector value={paymentMethod} onChange={setPaymentMethod} />
+              </div>
 
-                  <div className="border-t border-gray-100 pt-6">
-                    <p className="text-xs font-body font-semibold uppercase tracking-widest text-muted mb-4">
-                      Payment
-                    </p>
-                    <PayPalCheckout
-                      amount={total}
-                      description={`PBHS '86 Reunion T-Shirt (${size}) x${quantity}`}
-                      disabled={!formReady}
-                      disabledMessage="Fill out your details above to enable PayPal"
-                      onApprove={handleApprove}
-                    />
-                  </div>
+              <div className="mb-6">
+                {paymentMethod === 'cashapp' ? (
+                  <CashAppPanel
+                    amount={total}
+                    instruction="After sending payment, complete the form below to confirm your order."
+                  />
+                ) : (
+                  <ZellePanel
+                    instruction={`Open your banking app or Zelle app, send $${total.toFixed(2)} to the contact above, then complete the form below to confirm your order.`}
+                  />
+                )}
+              </div>
 
-                  {submitError && (
-                    <div className="flex items-start gap-3 bg-accent/5 border border-accent/30 rounded-lg p-4">
-                      <AlertTriangle size={18} className="text-accent shrink-0 mt-0.5" />
-                      <p className="text-xs font-body text-primary">{submitError}</p>
-                    </div>
-                  )}
+              <div className="border-t border-gray-100 pt-6 mb-6">
+                <p className="text-xs font-body font-semibold uppercase tracking-widest text-muted mb-4">
+                  Confirm your order
+                </p>
+                <ContactForm values={contact} onChange={setContact} idPrefix="store" />
+              </div>
+
+              {submitError && (
+                <div className="flex items-start gap-3 bg-accent/5 border border-accent/30 rounded-lg p-4 mb-4">
+                  <AlertTriangle size={18} className="text-accent shrink-0 mt-0.5" />
+                  <p className="text-xs font-body text-primary">{submitError}</p>
                 </div>
               )}
-            </div>
+
+              <button
+                type="submit"
+                disabled={!formReady || submitting}
+                className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Submitting…' : 'Submit Order'}
+              </button>
+            </form>
           </div>
         </div>
       </section>
@@ -246,14 +262,18 @@ function Confirmation({ order }) {
             <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-5">
               <Check size={24} className="text-accent" />
             </div>
-            <h2 className="font-display font-bold text-2xl text-primary mb-2">Order confirmed</h2>
-            <p className="font-body text-sm text-muted mb-6">
-              Thank you, {order.name.split(' ')[0]}! Your reunion tee is on its way. A receipt has been sent to {order.email}.
+            <h2 className="font-display font-bold text-2xl text-primary mb-2">
+              Thanks, {order.name.split(' ')[0]}!
+            </h2>
+            <p className="font-body text-sm text-muted mb-6 leading-relaxed">
+              Your order is <span className="font-semibold text-primary">pending</span>. We'll confirm once we verify your{' '}
+              {order.paymentMethod === 'cashapp' ? 'Cash App' : 'Zelle'} payment. A follow-up will be sent to {order.email}.
             </p>
             <dl className="space-y-2 text-sm font-body border-t border-gray-100 pt-5">
               <Row label="Item" value={`${SHIRT.name} (${order.size}) × ${order.quantity}`} />
               <Row label="Total" value={`$${order.amount.toFixed(2)}`} />
-              <Row label="PayPal order" value={order.paypalOrderId} mono />
+              <Row label="Payment" value={order.paymentMethod === 'cashapp' ? 'Cash App' : 'Zelle'} />
+              {order.confirmationNote && <Row label="Confirmation note" value={order.confirmationNote} />}
             </dl>
           </div>
         </div>
@@ -262,11 +282,11 @@ function Confirmation({ order }) {
   )
 }
 
-function Row({ label, value, mono = false }) {
+function Row({ label, value }) {
   return (
     <div className="flex justify-between gap-4">
       <dt className="text-muted">{label}</dt>
-      <dd className={`text-primary text-right ${mono ? 'font-mono text-xs break-all' : 'font-medium'}`}>{value}</dd>
+      <dd className="text-primary text-right font-medium">{value}</dd>
     </div>
   )
 }

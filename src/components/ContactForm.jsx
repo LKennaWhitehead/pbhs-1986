@@ -1,6 +1,10 @@
-import { useState } from 'react'
-
-export default function DonorForm({ values, onChange, includeMessage = false, idPrefix = 'donor' }) {
+export default function ContactForm({
+  values,
+  onChange,
+  includeMessage = false,
+  includeConfirmationNote = true,
+  idPrefix = 'contact',
+}) {
   const set = (field) => (e) => onChange({ ...values, [field]: e.target.value })
 
   return (
@@ -46,10 +50,23 @@ export default function DonorForm({ values, onChange, includeMessage = false, id
           <textarea
             id={`${idPrefix}-message`}
             rows={3}
-            value={values.message}
+            value={values.message || ''}
             onChange={set('message')}
             className={`${inputClass} resize-y`}
             placeholder="Share a note with the planning committee"
+          />
+        </Field>
+      )}
+
+      {includeConfirmationNote && (
+        <Field id={`${idPrefix}-note`} label="Transaction note or confirmation number (optional)">
+          <input
+            id={`${idPrefix}-note`}
+            type="text"
+            value={values.confirmationNote || ''}
+            onChange={set('confirmationNote')}
+            placeholder="Cash App / Zelle confirmation ID or note"
+            className={inputClass}
           />
         </Field>
       )}
@@ -71,9 +88,8 @@ function Field({ id, label, required, children }) {
   )
 }
 
-export function donorFormValid(values, { requireMessage = false } = {}) {
-  const { name, email, phone, message } = values
+export function contactFormValid(values) {
+  const { name, email, phone } = values
   if (!name?.trim() || !email?.trim() || !phone?.trim()) return false
-  if (requireMessage && !message?.trim()) return false
   return /\S+@\S+\.\S+/.test(email)
 }
