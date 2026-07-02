@@ -1,11 +1,19 @@
-export const CASHTAG = import.meta.env.VITE_CASHAPP_CASHTAG || 'YourCashTag'
-export const ZELLE_CONTACT = import.meta.env.VITE_ZELLE_CONTACT || 'zelle@youremail.com'
-export const CASHAPP_QR_URL = '/cashapp_qr.png'
-
-export function cashAppLink(amount) {
-  const n = Number(amount)
-  const suffix = Number.isFinite(n) && n > 0 ? `/${n.toFixed(2)}` : ''
-  return `https://cash.app/$${CASHTAG}${suffix}`
+export const STORE_PAYMENT = {
+  cashtag: import.meta.env.VITE_STORE_CASHTAG || 'YourStoreCashTag',
+  zelleContact: import.meta.env.VITE_STORE_ZELLE || 'store-zelle@example.com',
+  qrUrl: '/cashapp_qr_store.png',
 }
 
-export const zelleIsEmail = /\S+@\S+\.\S+/.test(ZELLE_CONTACT)
+export const DONATIONS_PAYMENT = {
+  cashtag: import.meta.env.VITE_DONATIONS_CASHTAG || 'pbhsco1986',
+  zelleContact: import.meta.env.VITE_DONATIONS_ZELLE || 'pbhsco1986@gmail.com',
+  qrUrl: '/cashapp_qr_donations.png',
+}
+
+export function cashAppLink(cashtag, amount) {
+  const n = Number(amount)
+  const suffix = Number.isFinite(n) && n > 0 ? `/${n.toFixed(2)}` : ''
+  return `https://cash.app/$${cashtag}${suffix}`
+}
+
+export const isEmail = (v) => /\S+@\S+\.\S+/.test(v)

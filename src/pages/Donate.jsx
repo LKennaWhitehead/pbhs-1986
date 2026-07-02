@@ -14,6 +14,7 @@ import PaymentMethodSelector from '../components/PaymentMethodSelector'
 import CashAppPanel from '../components/CashAppPanel'
 import ZellePanel from '../components/ZellePanel'
 import ProgressBar from '../components/ProgressBar'
+import { DONATIONS_PAYMENT } from '../lib/payment'
 import zebraBg from '../assets/zebra_print_background.jpg'
 import zebraHeader from '../assets/zebra_header.png'
 
@@ -205,11 +206,14 @@ function DonationSection({ type, badge, title, icon, description, ctaLabel, extr
       <div className="mb-6">
         {paymentMethod === 'cashapp' ? (
           <CashAppPanel
+            cashtag={DONATIONS_PAYMENT.cashtag}
+            qrUrl={DONATIONS_PAYMENT.qrUrl}
             amount={amount}
             instruction="After sending payment, complete the form below to confirm your donation."
           />
         ) : (
           <ZellePanel
+            contact={DONATIONS_PAYMENT.zelleContact}
             instruction={`Open your banking app or Zelle app, send $${amount > 0 ? amount.toFixed(2) : '0.00'} to the contact above, then complete the form below to confirm your donation.`}
           />
         )}

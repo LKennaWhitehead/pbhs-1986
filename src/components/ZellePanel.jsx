@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Copy, Check, Mail, Info } from 'lucide-react'
-import { ZELLE_CONTACT, zelleIsEmail } from '../lib/payment'
+import { isEmail } from '../lib/payment'
 
-export default function ZellePanel({ instruction }) {
+export default function ZellePanel({ contact, instruction }) {
   const [copied, setCopied] = useState(false)
+  const contactIsEmail = isEmail(contact)
 
   async function copyContact() {
     try {
-      await navigator.clipboard.writeText(ZELLE_CONTACT)
+      await navigator.clipboard.writeText(contact)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
@@ -22,7 +23,7 @@ export default function ZellePanel({ instruction }) {
       </p>
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         <p className="font-display font-bold text-xl sm:text-2xl text-primary break-all">
-          {ZELLE_CONTACT}
+          {contact}
         </p>
         <button
           type="button"
@@ -41,13 +42,13 @@ export default function ZellePanel({ instruction }) {
         </button>
       </div>
 
-      {zelleIsEmail && (
+      {contactIsEmail && (
         <div className="mb-4">
           <a
-            href={`mailto:${ZELLE_CONTACT}`}
+            href={`mailto:${contact}`}
             className="inline-flex items-center gap-2 bg-[#6D1ED4] text-white font-body font-semibold px-5 py-2.5 rounded-lg text-sm hover:bg-[#5A18B0] transition-colors cursor-pointer shadow-sm"
           >
-            <Mail size={15} /> Open email to {ZELLE_CONTACT}
+            <Mail size={15} /> Open email to {contact}
           </a>
           <div className="flex items-start gap-2 mt-2">
             <Info size={12} className="text-muted shrink-0 mt-0.5" />

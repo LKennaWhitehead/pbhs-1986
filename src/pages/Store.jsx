@@ -6,16 +6,24 @@ import ContactForm, { contactFormValid } from '../components/ContactForm'
 import PaymentMethodSelector from '../components/PaymentMethodSelector'
 import CashAppPanel from '../components/CashAppPanel'
 import ZellePanel from '../components/ZellePanel'
+import { STORE_PAYMENT } from '../lib/payment'
 import zebraBg from '../assets/zebra_print_background.jpg'
 import zebraHeader from '../assets/zebra_header.png'
 
 const SHIRT = {
   name: 'PBHS ’86 Reunion T-Shirt',
-  price: 25,
   description:
     'Commemorative 40th anniversary tee — soft cotton blend, zebra-print accent, and the Class of ’86 mark on the back. Limited run for reunion weekend.',
 }
-const SIZES = ['S', 'M', 'L', 'XL', 'XXL']
+const SIZES = [
+  { size: 'S', price: 25 },
+  { size: 'M', price: 25 },
+  { size: 'L', price: 25 },
+  { size: 'XL', price: 25 },
+  { size: 'XXL', price: 30 },
+  { size: '3XL', price: 30 },
+]
+const priceFor = (s) => SIZES.find((x) => x.size === s)?.price ?? 25
 
 export default function Store() {
   const [size, setSize] = useState('M')
@@ -31,7 +39,8 @@ export default function Store() {
   const [submitError, setSubmitError] = useState(null)
   const [confirmation, setConfirmation] = useState(null)
 
-  const total = useMemo(() => SHIRT.price * quantity, [quantity])
+  const unitPrice = priceFor(size)
+  const total = useMemo(() => unitPrice * quantity, [unitPrice, quantity])
   const formReady = contactFormValid(contact)
 
   async function handleSubmit(e) {
@@ -99,9 +108,10 @@ export default function Store() {
                 </p>
                 <h2 className="font-display font-bold text-xl text-primary mb-2">{SHIRT.name}</h2>
                 <p className="font-body text-sm text-muted leading-relaxed">{SHIRT.description}</p>
-                <p className="font-display font-bold text-2xl text-primary mt-4">
-                  ${SHIRT.price.toFixed(2)}
-                </p>
+                <div className="mt-4 space-y-0.5">
+                  <p className="font-display font-bold text-2xl text-primary">$25 – $30</p>
+                  <p className="text-xs font-body text-muted">$25 for S–XL · $30 for XXL & 3XL</p>
+                </div>
               </div>
             </div>
           </div>
@@ -121,18 +131,21 @@ export default function Store() {
                   Size
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {SIZES.map((s) => (
+                  {SIZES.map(({ size: s, price }) => (
                     <button
                       key={s}
                       type="button"
                       onClick={() => setSize(s)}
-                      className={`min-w-[3rem] px-4 py-2.5 rounded-lg border font-body text-sm font-semibold transition-all duration-150 cursor-pointer ${
+                      className={`min-w-[3rem] px-4 py-2.5 rounded-lg border font-body text-sm font-semibold transition-all duration-150 cursor-pointer flex flex-col items-center leading-tight ${
                         size === s
                           ? 'bg-accent text-white border-accent shadow-sm'
                           : 'bg-white text-primary border-gray-200 hover:border-accent'
                       }`}
                     >
-                      {s}
+                      <span>{s}</span>
+                      <span className={`text-[10px] font-body font-medium ${size === s ? 'text-white/80' : 'text-muted'}`}>
+                        ${price}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -186,11 +199,14 @@ export default function Store() {
               <div className="mb-6">
                 {paymentMethod === 'cashapp' ? (
                   <CashAppPanel
+                    cashtag={STORE_PAYMENT.cashtag}
+                    qrUrl={STORE_PAYMENT.qrUrl}
                     amount={total}
                     instruction="After sending payment, complete the form below to confirm your order."
                   />
                 ) : (
                   <ZellePanel
+                    contact={STORE_PAYMENT.zelleContact}
                     instruction={`Open your banking app or Zelle app, send $${total.toFixed(2)} to the contact above, then complete the form below to confirm your order.`}
                   />
                 )}

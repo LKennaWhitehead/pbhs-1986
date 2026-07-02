@@ -49,7 +49,7 @@ function isValidOrder(data) {
       && data.name is string && data.name.size() > 0 && data.name.size() < 200
       && data.email is string && data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
       && data.phone is string && data.phone.size() > 0 && data.phone.size() < 40
-      && data.size in ['S', 'M', 'L', 'XL', 'XXL']
+      && data.size in ['S', 'M', 'L', 'XL', 'XXL', '3XL']
       && data.quantity is int && data.quantity > 0 && data.quantity <= 20
       && data.amount is number && data.amount > 0
       && data.paymentMethod in ['cashapp', 'zelle']

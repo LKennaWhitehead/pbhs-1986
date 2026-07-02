@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { ExternalLink, QrCode } from 'lucide-react'
-import { CASHTAG, CASHAPP_QR_URL, cashAppLink } from '../lib/payment'
+import { cashAppLink } from '../lib/payment'
 
-export default function CashAppPanel({ amount, instruction }) {
+export default function CashAppPanel({ cashtag, qrUrl, amount, instruction }) {
   const [qrFailed, setQrFailed] = useState(false)
   const validAmount = Number.isFinite(Number(amount)) && Number(amount) > 0
-  const link = cashAppLink(amount)
+  const link = cashAppLink(cashtag, amount)
 
   return (
     <div className="bg-surface border border-gray-100 rounded-xl p-5">
@@ -15,7 +15,7 @@ export default function CashAppPanel({ amount, instruction }) {
             Send to
           </p>
           <p className="font-display font-bold text-2xl text-primary mb-4 break-all">
-            ${CASHTAG}
+            ${cashtag}
           </p>
 
           <a
@@ -48,13 +48,13 @@ export default function CashAppPanel({ amount, instruction }) {
                 <QrCode size={28} className="text-muted mx-auto mb-1" />
                 <p className="text-[10px] font-body text-muted leading-tight">
                   Add QR at<br />
-                  <code className="text-primary">public/cashapp_qr.png</code>
+                  <code className="text-primary">public{qrUrl}</code>
                 </p>
               </div>
             ) : (
               <img
-                src={CASHAPP_QR_URL}
-                alt={`Cash App QR code for $${CASHTAG}`}
+                src={qrUrl}
+                alt={`Cash App QR code for $${cashtag}`}
                 className="w-full h-full object-contain"
                 onError={() => setQrFailed(true)}
               />
