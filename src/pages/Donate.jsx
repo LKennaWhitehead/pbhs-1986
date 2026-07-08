@@ -78,7 +78,6 @@ function DonationSection({ type, badge, title, icon, description, ctaLabel, extr
     email: '',
     phone: '',
     message: '',
-    confirmationNote: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
@@ -99,7 +98,6 @@ function DonationSection({ type, badge, title, icon, description, ctaLabel, extr
       message: donor.message?.trim() || '',
       type,
       paymentMethod,
-      confirmationNote: donor.confirmationNote?.trim() || '',
     }
 
     try {
@@ -176,6 +174,7 @@ function DonationSection({ type, badge, title, icon, description, ctaLabel, extr
           values={donor}
           onChange={setDonor}
           includeMessage
+          includeConfirmationNote={false}
           idPrefix={`donate-${type}`}
         />
       </div>
