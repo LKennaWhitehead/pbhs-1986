@@ -10,7 +10,6 @@ import zebraBg from '../assets/zebra_print_background.jpg'
 import zebraHeader from '../assets/zebra_header.png'
 
 const FUNDRAISER_GOAL = 1986
-const PRESETS = [10, 25, 50, 100]
 
 const DONATE_METHODS = [
   { id: 'cashapp', label: 'Cash App' },
@@ -73,8 +72,6 @@ function GoalCard({ goal }) {
 }
 
 function DonationSection({ type, badge, title, icon, description, ctaLabel, extra }) {
-  const [selected, setSelected] = useState(25)
-  const [custom, setCustom] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('cashapp')
   const [donor, setDonor] = useState({
     name: '',
@@ -87,14 +84,11 @@ function DonationSection({ type, badge, title, icon, description, ctaLabel, extr
   const [submitError, setSubmitError] = useState(null)
   const [confirmation, setConfirmation] = useState(null)
 
-  const customAmount = parseFloat(custom)
-  const amount = custom ? (Number.isFinite(customAmount) ? customAmount : 0) : selected
-  const amountValid = amount > 0
   const formReady = contactFormValid(donor)
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!formReady || !amountValid || submitting) return
+    if (!formReady || submitting) return
     setSubmitting(true)
     setSubmitError(null)
 
@@ -103,7 +97,6 @@ function DonationSection({ type, badge, title, icon, description, ctaLabel, extr
       email: donor.email.trim(),
       phone: donor.phone.trim(),
       message: donor.message?.trim() || '',
-      amount,
       type,
       paymentMethod,
       confirmationNote: donor.confirmationNote?.trim() || '',
@@ -129,8 +122,7 @@ function DonationSection({ type, badge, title, icon, description, ctaLabel, extr
           Thank you, {confirmation.name.split(' ')[0]}!
         </h3>
         <p className="font-body text-sm text-muted mb-2 leading-relaxed">
-          Your {type === 'fundraiser' ? 'donation' : 'auction contribution'} of{' '}
-          <span className="font-semibold text-primary">${confirmation.amount.toFixed(2)}</span> has been submitted.
+          Your {type === 'fundraiser' ? 'donation' : 'auction contribution'} has been submitted.
         </p>
         <p className="font-body text-sm text-muted leading-relaxed">
           We'll confirm once we verify your{' '}
@@ -153,43 +145,6 @@ function DonationSection({ type, badge, title, icon, description, ctaLabel, extr
 
       {extra && <div className="mb-6">{extra}</div>}
 
-      <div className="mb-6">
-        <p className="block text-xs font-body font-semibold uppercase tracking-widest text-muted mb-3">
-          Amount
-        </p>
-        <div className="flex flex-wrap gap-2 mb-3">
-          {PRESETS.map((amt) => (
-            <button
-              key={amt}
-              type="button"
-              onClick={() => {
-                setSelected(amt)
-                setCustom('')
-              }}
-              className={`px-5 py-2.5 rounded-lg border font-body text-sm font-semibold transition-all duration-150 cursor-pointer ${
-                !custom && selected === amt
-                  ? 'bg-accent text-white border-accent shadow-sm'
-                  : 'bg-white text-primary border-gray-200 hover:border-accent'
-              }`}
-            >
-              ${amt}
-            </button>
-          ))}
-        </div>
-        <div className="relative max-w-xs">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-body text-sm">$</span>
-          <input
-            type="number"
-            min={1}
-            step="0.01"
-            value={custom}
-            onChange={(e) => setCustom(e.target.value)}
-            placeholder="Custom amount"
-            className="w-full pl-8 pr-4 py-3 rounded-lg border border-gray-200 bg-white font-body text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-150"
-          />
-        </div>
-      </div>
-
       <div className="mb-5">
         <PaymentMethodSelector
           methods={DONATE_METHODS}
@@ -203,14 +158,12 @@ function DonationSection({ type, badge, title, icon, description, ctaLabel, extr
           <CashAppPanel
             cashtag={DONATIONS_PAYMENT.cashtag}
             qrUrl={DONATIONS_PAYMENT.qrUrl}
-            amount={amount}
-            instruction="After sending payment, complete the form below to confirm your donation."
+            instruction="Enter your donation amount in Cash App, send it, then complete the form below."
           />
         ) : (
           <PayPalPanel
             handle={DONATIONS_PAYMENT.paypalMe}
-            amount={amount}
-            instruction="The button opens paypal.me with the amount prefilled. After paying, complete the form below to confirm your donation."
+            instruction="Enter your donation amount on PayPal, send it, then complete the form below."
           />
         )}
       </div>
@@ -236,7 +189,7 @@ function DonationSection({ type, badge, title, icon, description, ctaLabel, extr
 
       <button
         type="submit"
-        disabled={!formReady || !amountValid || submitting}
+        disabled={!formReady || submitting}
         className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {submitting ? 'Submitting…' : ctaLabel}

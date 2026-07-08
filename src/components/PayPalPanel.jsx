@@ -18,13 +18,7 @@ export default function PayPalPanel({ handle, amount, instruction }) {
         href={link}
         target="_blank"
         rel="noopener noreferrer"
-        aria-disabled={!validAmount}
-        onClick={(e) => !validAmount && e.preventDefault()}
-        className={`inline-flex items-center justify-center gap-2 bg-[#0070BA] text-white font-body font-semibold px-6 py-3 rounded-lg text-sm transition-all duration-200 ${
-          validAmount
-            ? 'hover:bg-[#005EA6] cursor-pointer shadow-sm hover:shadow-md'
-            : 'opacity-50 cursor-not-allowed'
-        }`}
+        className="inline-flex items-center justify-center gap-2 bg-[#0070BA] text-white font-body font-semibold px-6 py-3 rounded-lg text-sm hover:bg-[#005EA6] cursor-pointer shadow-sm hover:shadow-md transition-all duration-200"
       >
         Pay with PayPal
         {validAmount && <span className="opacity-80">${Number(amount).toFixed(2)}</span>}

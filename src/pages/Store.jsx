@@ -37,7 +37,6 @@ export default function Store() {
     name: '',
     email: '',
     phone: '',
-    confirmationNote: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
@@ -61,7 +60,6 @@ export default function Store() {
       quantity,
       amount: total,
       paymentMethod,
-      confirmationNote: contact.confirmationNote?.trim() || '',
     }
 
     try {
@@ -217,7 +215,12 @@ export default function Store() {
                 <p className="text-xs font-body font-semibold uppercase tracking-widest text-muted mb-4">
                   Confirm your order
                 </p>
-                <ContactForm values={contact} onChange={setContact} idPrefix="store" />
+                <ContactForm
+                  values={contact}
+                  onChange={setContact}
+                  includeConfirmationNote={false}
+                  idPrefix="store"
+                />
               </div>
 
               {submitError && (
@@ -290,7 +293,6 @@ function Confirmation({ order }) {
               <Row label="Item" value={`${SHIRT.name} (${order.size}) × ${order.quantity}`} />
               <Row label="Total" value={`$${order.amount.toFixed(2)}`} />
               <Row label="Payment" value={order.paymentMethod === 'cashapp' ? 'Cash App' : 'Zelle'} />
-              {order.confirmationNote && <Row label="Confirmation note" value={order.confirmationNote} />}
             </dl>
           </div>
         </div>
