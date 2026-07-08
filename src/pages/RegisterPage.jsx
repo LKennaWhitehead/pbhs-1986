@@ -2,8 +2,7 @@ import { ExternalLink, Ticket, Shirt, Heart, Users } from 'lucide-react'
 import zebraBg from '../assets/zebra_print_background.jpg'
 import zebraHeader from '../assets/zebra_header.png'
 
-const FORM_URL =
-  'https://docs.google.com/forms/d/e/1FAIpQLSdIgVAcmLMtPMpgqFYPCauBkQCjJN3TZ4P0ugYodOh6_HCnRA/viewform'
+const FORM_URL = 'https://forms.gle/UKmkQkPSaBSvPe2g9'
 const FB_URL = 'https://www.facebook.com/share/p/1Csh6ANkvr/'
 
 function FacebookIcon({ size = 16 }) {
