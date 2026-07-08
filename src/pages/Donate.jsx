@@ -1,11 +1,9 @@
 import { useState } from 'react'
-import { Heart, Gavel, Check, AlertTriangle, Target } from 'lucide-react'
-import ContactForm, { contactFormValid } from '../components/ContactForm'
+import { Heart, Gavel, Target } from 'lucide-react'
 import PaymentMethodSelector from '../components/PaymentMethodSelector'
 import CashAppPanel from '../components/CashAppPanel'
 import PayPalPanel from '../components/PayPalPanel'
 import { DONATIONS_PAYMENT } from '../lib/payment'
-import { submitNetlifyForm } from '../lib/netlifyForm'
 import zebraBg from '../assets/zebra_print_background.jpg'
 import zebraHeader from '../assets/zebra_header.png'
 
@@ -29,22 +27,20 @@ export default function Donate() {
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
 
           <DonationSection
-            type="fundraiser"
             badge="Class Fundraiser"
             title="Help us hit $1,986"
             icon={<Heart size={20} className="text-accent" />}
             description="Every dollar covers reunion logistics, the welcome reception, classmate scholarships, and the legacy gift to PBHS. Goal is a nod to our graduating year."
-            ctaLabel="Submit Donation"
+            memo="Include your name in the memo and note that it's for the class fundraiser."
             extra={<GoalCard goal={FUNDRAISER_GOAL} />}
           />
 
           <DonationSection
-            type="auction"
             badge="Silent Auction"
             title="Contribute to the silent auction"
             icon={<Gavel size={20} className="text-accent" />}
             description="Bid alongside classmates on themed baskets, Pine Bluff getaways, and Zebra memorabilia. All proceeds support the reunion fund."
-            ctaLabel="Submit Contribution"
+            memo="Include your name in the memo and note that it's for the silent auction."
           />
         </div>
       </section>
@@ -71,67 +67,11 @@ function GoalCard({ goal }) {
   )
 }
 
-function DonationSection({ type, badge, title, icon, description, ctaLabel, extra }) {
+function DonationSection({ badge, title, icon, description, memo, extra }) {
   const [paymentMethod, setPaymentMethod] = useState('cashapp')
-  const [donor, setDonor] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: '',
-  })
-  const [submitting, setSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState(null)
-  const [confirmation, setConfirmation] = useState(null)
-
-  const formReady = contactFormValid(donor)
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    if (!formReady || submitting) return
-    setSubmitting(true)
-    setSubmitError(null)
-
-    const donation = {
-      name: donor.name.trim(),
-      email: donor.email.trim(),
-      phone: donor.phone.trim(),
-      message: donor.message?.trim() || '',
-      type,
-      paymentMethod,
-    }
-
-    try {
-      await submitNetlifyForm('donations', donation)
-      setConfirmation(donation)
-    } catch (err) {
-      setSubmitError(err?.message || 'Could not submit your donation. Please try again.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  if (confirmation) {
-    return (
-      <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-8">
-        <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-5">
-          <Check size={24} className="text-accent" />
-        </div>
-        <h3 className="font-display font-bold text-2xl text-primary mb-2">
-          Thank you, {confirmation.name.split(' ')[0]}!
-        </h3>
-        <p className="font-body text-sm text-muted mb-2 leading-relaxed">
-          Your {type === 'fundraiser' ? 'donation' : 'auction contribution'} has been submitted.
-        </p>
-        <p className="font-body text-sm text-muted leading-relaxed">
-          We'll confirm once we verify your{' '}
-          {confirmation.paymentMethod === 'cashapp' ? 'Cash App' : 'PayPal'} payment.
-        </p>
-      </div>
-    )
-  }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-card border border-gray-100 p-6 sm:p-8">
+    <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-6 sm:p-8">
       <div className="flex items-center gap-2 mb-3">
         {icon}
         <span className="text-xs font-body font-semibold uppercase tracking-widest text-accent">
@@ -151,49 +91,21 @@ function DonationSection({ type, badge, title, icon, description, ctaLabel, extr
         />
       </div>
 
-      <div className="mb-6">
+      <div>
         {paymentMethod === 'cashapp' ? (
           <CashAppPanel
             cashtag={DONATIONS_PAYMENT.cashtag}
             qrUrl={DONATIONS_PAYMENT.qrUrl}
-            instruction="Enter your donation amount in Cash App, send it, then complete the form below."
+            instruction={`Enter your donation amount in Cash App. ${memo}`}
           />
         ) : (
           <PayPalPanel
             handle={DONATIONS_PAYMENT.paypalMe}
-            instruction="Enter your donation amount on PayPal, send it, then complete the form below."
+            instruction={`The button opens paypal.me — enter your donation amount there. ${memo}`}
           />
         )}
       </div>
-
-      <div className="border-t border-gray-100 pt-6 mb-6">
-        <p className="text-xs font-body font-semibold uppercase tracking-widest text-muted mb-4">
-          Confirm your donation
-        </p>
-        <ContactForm
-          values={donor}
-          onChange={setDonor}
-          includeMessage
-          includeConfirmationNote={false}
-          idPrefix={`donate-${type}`}
-        />
-      </div>
-
-      {submitError && (
-        <div className="flex items-start gap-3 bg-accent/5 border border-accent/30 rounded-lg p-4 mb-4">
-          <AlertTriangle size={18} className="text-accent shrink-0 mt-0.5" />
-          <p className="text-xs font-body text-primary">{submitError}</p>
-        </div>
-      )}
-
-      <button
-        type="submit"
-        disabled={!formReady || submitting}
-        className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {submitting ? 'Submitting…' : ctaLabel}
-      </button>
-    </form>
+    </div>
   )
 }
 

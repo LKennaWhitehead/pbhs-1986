@@ -32,32 +32,6 @@
   </head>
   <body>
     <div id="root"></div>
-
-    <!-- Netlify Forms: hidden static declarations so the build-time scanner
-         registers these form names. React posts to them at runtime. -->
-    <form name="tshirt-orders" data-netlify="true" data-netlify-honeypot="bot-field" hidden>
-      <input type="text" name="bot-field" />
-      <input type="text" name="name" />
-      <input type="email" name="email" />
-      <input type="tel" name="phone" />
-      <input type="text" name="size" />
-      <input type="number" name="quantity" />
-      <input type="number" name="amount" />
-      <input type="text" name="paymentMethod" />
-      <input type="text" name="confirmationNote" />
-    </form>
-    <form name="donations" data-netlify="true" data-netlify-honeypot="bot-field" hidden>
-      <input type="text" name="bot-field" />
-      <input type="text" name="name" />
-      <input type="email" name="email" />
-      <input type="tel" name="phone" />
-      <input type="number" name="amount" />
-      <input type="text" name="type" />
-      <input type="text" name="paymentMethod" />
-      <input type="text" name="confirmationNote" />
-      <textarea name="message"></textarea>
-    </form>
-
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

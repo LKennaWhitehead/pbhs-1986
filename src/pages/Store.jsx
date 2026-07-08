@@ -1,11 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Shirt, Check, AlertTriangle } from 'lucide-react'
-import ContactForm, { contactFormValid } from '../components/ContactForm'
+import { Shirt } from 'lucide-react'
 import PaymentMethodSelector from '../components/PaymentMethodSelector'
 import CashAppPanel from '../components/CashAppPanel'
 import ZellePanel from '../components/ZellePanel'
 import { STORE_PAYMENT } from '../lib/payment'
-import { submitNetlifyForm } from '../lib/netlifyForm'
 import zebraBg from '../assets/zebra_print_background.jpg'
 import zebraHeader from '../assets/zebra_header.png'
 
@@ -33,46 +31,10 @@ export default function Store() {
   const [size, setSize] = useState('M')
   const [quantity, setQuantity] = useState(1)
   const [paymentMethod, setPaymentMethod] = useState('cashapp')
-  const [contact, setContact] = useState({
-    name: '',
-    email: '',
-    phone: '',
-  })
-  const [submitting, setSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState(null)
-  const [confirmation, setConfirmation] = useState(null)
 
   const unitPrice = priceFor(size)
   const total = useMemo(() => unitPrice * quantity, [unitPrice, quantity])
-  const formReady = contactFormValid(contact)
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    if (!formReady || submitting) return
-    setSubmitting(true)
-    setSubmitError(null)
-
-    const order = {
-      name: contact.name.trim(),
-      email: contact.email.trim(),
-      phone: contact.phone.trim(),
-      size,
-      quantity,
-      amount: total,
-      paymentMethod,
-    }
-
-    try {
-      await submitNetlifyForm('tshirt-orders', order)
-      setConfirmation(order)
-    } catch (err) {
-      setSubmitError(err?.message || 'Could not submit your order. Please try again.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  if (confirmation) return <Confirmation order={confirmation} />
+  const memoLine = `Include your name, size (${size}), and quantity (${quantity}) in the memo so we can fulfill your order.`
 
   return (
     <div className="pt-16">
@@ -111,13 +73,10 @@ export default function Store() {
           </div>
 
           <div className="lg:col-span-3">
-            <form
-              onSubmit={handleSubmit}
-              className="bg-white rounded-2xl shadow-card border border-gray-100 p-6 sm:p-8"
-            >
+            <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-6 sm:p-8">
               <h3 className="font-display font-bold text-2xl text-primary mb-1">Order details</h3>
               <p className="font-body text-sm text-muted mb-6">
-                Pick a size and quantity, send payment, then submit the confirmation below.
+                Pick a size and quantity, then send payment via Cash App or Zelle.
               </p>
 
               <div className="mb-5">
@@ -194,50 +153,23 @@ export default function Store() {
                 />
               </div>
 
-              <div className="mb-6">
+              <div>
                 {paymentMethod === 'cashapp' ? (
                   <CashAppPanel
                     cashtag={STORE_PAYMENT.cashtag}
                     qrUrl={STORE_PAYMENT.qrUrl}
                     amount={total}
-                    instruction="After sending payment, complete the form below to confirm your order."
+                    instruction={memoLine}
                   />
                 ) : (
                   <ZellePanel
                     recipientName={STORE_PAYMENT.zelle.recipientName}
                     contact={STORE_PAYMENT.zelle.contact}
-                    instruction={`Open your banking app or Zelle app, tap "Send", then paste this phone number as the recipient. Send $${total.toFixed(2)}, then complete the form below to confirm your order.`}
+                    instruction={`Open your banking app or Zelle app, tap "Send", and paste this phone number as the recipient. Send $${total.toFixed(2)}. ${memoLine}`}
                   />
                 )}
               </div>
-
-              <div className="border-t border-gray-100 pt-6 mb-6">
-                <p className="text-xs font-body font-semibold uppercase tracking-widest text-muted mb-4">
-                  Confirm your order
-                </p>
-                <ContactForm
-                  values={contact}
-                  onChange={setContact}
-                  includeConfirmationNote={false}
-                  idPrefix="store"
-                />
-              </div>
-
-              {submitError && (
-                <div className="flex items-start gap-3 bg-accent/5 border border-accent/30 rounded-lg p-4 mb-4">
-                  <AlertTriangle size={18} className="text-accent shrink-0 mt-0.5" />
-                  <p className="text-xs font-body text-primary">{submitError}</p>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={!formReady || submitting}
-                className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? 'Submitting…' : 'Submit Order'}
-              </button>
-            </form>
+            </div>
           </div>
         </div>
       </section>
@@ -265,47 +197,5 @@ function Header() {
         <div className="red-divider mt-8 max-w-xs mx-auto" />
       </div>
     </section>
-  )
-}
-
-function Confirmation({ order }) {
-  return (
-    <div className="pt-16">
-      <Header />
-      <section
-        className="relative py-16"
-        style={{ backgroundImage: `url(${zebraBg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-      >
-        <div className="absolute inset-0 bg-cream/93" />
-        <div className="relative z-10 max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-8">
-            <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-5">
-              <Check size={24} className="text-accent" />
-            </div>
-            <h2 className="font-display font-bold text-2xl text-primary mb-2">
-              Thanks, {order.name.split(' ')[0]}!
-            </h2>
-            <p className="font-body text-sm text-muted mb-6 leading-relaxed">
-              Your order has been submitted. We'll confirm once we verify your{' '}
-              {order.paymentMethod === 'cashapp' ? 'Cash App' : 'Zelle'} payment. A follow-up will be sent to {order.email}.
-            </p>
-            <dl className="space-y-2 text-sm font-body border-t border-gray-100 pt-5">
-              <Row label="Item" value={`${SHIRT.name} (${order.size}) × ${order.quantity}`} />
-              <Row label="Total" value={`$${order.amount.toFixed(2)}`} />
-              <Row label="Payment" value={order.paymentMethod === 'cashapp' ? 'Cash App' : 'Zelle'} />
-            </dl>
-          </div>
-        </div>
-      </section>
-    </div>
-  )
-}
-
-function Row({ label, value }) {
-  return (
-    <div className="flex justify-between gap-4">
-      <dt className="text-muted">{label}</dt>
-      <dd className="text-primary text-right font-medium">{value}</dd>
-    </div>
   )
 }
