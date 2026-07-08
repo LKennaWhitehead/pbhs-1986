@@ -1,11 +1,12 @@
-import { DollarSign, Send } from 'lucide-react'
+import { DollarSign, Send, Wallet } from 'lucide-react'
 
-const METHODS = [
-  { id: 'cashapp', label: 'Cash App', icon: DollarSign },
-  { id: 'zelle', label: 'Zelle', icon: Send },
-]
+const ICONS = {
+  cashapp: DollarSign,
+  zelle: Send,
+  paypal: Wallet,
+}
 
-export default function PaymentMethodSelector({ value, onChange }) {
+export default function PaymentMethodSelector({ methods, value, onChange }) {
   return (
     <div>
       <p className="block text-xs font-body font-semibold uppercase tracking-widest text-muted mb-3">
@@ -14,9 +15,11 @@ export default function PaymentMethodSelector({ value, onChange }) {
       <div
         role="tablist"
         aria-label="Payment method"
-        className="grid grid-cols-2 gap-2 p-1 bg-surface rounded-xl border border-gray-100"
+        className={`grid grid-cols-${methods.length} gap-2 p-1 bg-surface rounded-xl border border-gray-100`}
+        style={{ gridTemplateColumns: `repeat(${methods.length}, minmax(0, 1fr))` }}
       >
-        {METHODS.map(({ id, label, icon: Icon }) => {
+        {methods.map(({ id, label }) => {
+          const Icon = ICONS[id] || DollarSign
           const active = value === id
           return (
             <button

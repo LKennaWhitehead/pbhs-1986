@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Copy, Check, Mail, Info } from 'lucide-react'
 import { isEmail } from '../lib/payment'
 
-export default function ZellePanel({ contact, instruction }) {
+export default function ZellePanel({ contact, recipientName, instruction }) {
   const [copied, setCopied] = useState(false)
   const contactIsEmail = isEmail(contact)
 
@@ -19,8 +19,15 @@ export default function ZellePanel({ contact, instruction }) {
   return (
     <div className="bg-surface border border-gray-100 rounded-xl p-5">
       <p className="text-xs font-body font-semibold uppercase tracking-widest text-muted mb-2">
-        Send to
+        Send Zelle to
       </p>
+
+      {recipientName && (
+        <p className="font-display font-semibold text-lg text-primary leading-tight mb-1">
+          {recipientName}
+        </p>
+      )}
+
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         <p className="font-display font-bold text-xl sm:text-2xl text-primary break-all">
           {contact}
@@ -28,15 +35,15 @@ export default function ZellePanel({ contact, instruction }) {
         <button
           type="button"
           onClick={copyContact}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border border-gray-200 text-primary font-body text-xs font-semibold hover:border-accent transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent text-white border border-accent font-body text-xs font-semibold hover:bg-accent-dark transition-colors cursor-pointer shadow-sm"
         >
           {copied ? (
             <>
-              <Check size={13} className="text-accent" /> Copied
+              <Check size={13} /> Copied
             </>
           ) : (
             <>
-              <Copy size={13} /> Copy
+              <Copy size={13} /> Copy {contactIsEmail ? 'email' : 'number'}
             </>
           )}
         </button>

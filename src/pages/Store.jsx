@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Shirt, Check, AlertTriangle } from 'lucide-react'
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
-import { db, firebaseConfigured } from '../lib/firebase'
 import ContactForm, { contactFormValid } from '../components/ContactForm'
 import PaymentMethodSelector from '../components/PaymentMethodSelector'
 import CashAppPanel from '../components/CashAppPanel'
 import ZellePanel from '../components/ZellePanel'
 import { STORE_PAYMENT } from '../lib/payment'
+import { submitNetlifyForm } from '../lib/netlifyForm'
 import zebraBg from '../assets/zebra_print_background.jpg'
 import zebraHeader from '../assets/zebra_header.png'
 
@@ -24,6 +23,11 @@ const SIZES = [
   { size: '3XL', price: 30 },
 ]
 const priceFor = (s) => SIZES.find((x) => x.size === s)?.price ?? 25
+
+const STORE_METHODS = [
+  { id: 'cashapp', label: 'Cash App' },
+  { id: 'zelle', label: 'Zelle' },
+]
 
 export default function Store() {
   const [size, setSize] = useState('M')
@@ -58,21 +62,13 @@ export default function Store() {
       amount: total,
       paymentMethod,
       confirmationNote: contact.confirmationNote?.trim() || '',
-      status: 'pending',
-      timestamp: serverTimestamp(),
-    }
-
-    if (!firebaseConfigured || !db) {
-      setSubmitError('Firebase is not configured. Add your Firebase env vars and reload.')
-      setSubmitting(false)
-      return
     }
 
     try {
-      await addDoc(collection(db, 'orders'), order)
+      await submitNetlifyForm('tshirt-orders', order)
       setConfirmation(order)
     } catch (err) {
-      setSubmitError(err?.message || 'Could not save your order. Please try again.')
+      setSubmitError(err?.message || 'Could not submit your order. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -193,7 +189,11 @@ export default function Store() {
               </div>
 
               <div className="mb-5">
-                <PaymentMethodSelector value={paymentMethod} onChange={setPaymentMethod} />
+                <PaymentMethodSelector
+                  methods={STORE_METHODS}
+                  value={paymentMethod}
+                  onChange={setPaymentMethod}
+                />
               </div>
 
               <div className="mb-6">
@@ -206,8 +206,9 @@ export default function Store() {
                   />
                 ) : (
                   <ZellePanel
-                    contact={STORE_PAYMENT.zelleContact}
-                    instruction={`Open your banking app or Zelle app, send $${total.toFixed(2)} to the contact above, then complete the form below to confirm your order.`}
+                    recipientName={STORE_PAYMENT.zelle.recipientName}
+                    contact={STORE_PAYMENT.zelle.contact}
+                    instruction={`Open your banking app or Zelle app, tap "Send", then paste this phone number as the recipient. Send $${total.toFixed(2)}, then complete the form below to confirm your order.`}
                   />
                 )}
               </div>
@@ -282,7 +283,7 @@ function Confirmation({ order }) {
               Thanks, {order.name.split(' ')[0]}!
             </h2>
             <p className="font-body text-sm text-muted mb-6 leading-relaxed">
-              Your order is <span className="font-semibold text-primary">pending</span>. We'll confirm once we verify your{' '}
+              Your order has been submitted. We'll confirm once we verify your{' '}
               {order.paymentMethod === 'cashapp' ? 'Cash App' : 'Zelle'} payment. A follow-up will be sent to {order.email}.
             </p>
             <dl className="space-y-2 text-sm font-body border-t border-gray-100 pt-5">

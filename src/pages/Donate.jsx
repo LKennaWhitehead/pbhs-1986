@@ -1,43 +1,23 @@
-import { useEffect, useState } from 'react'
-import { Heart, Gavel, Check, AlertTriangle } from 'lucide-react'
-import {
-  addDoc,
-  collection,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  where,
-} from 'firebase/firestore'
-import { db, firebaseConfigured } from '../lib/firebase'
+import { useState } from 'react'
+import { Heart, Gavel, Check, AlertTriangle, Target } from 'lucide-react'
 import ContactForm, { contactFormValid } from '../components/ContactForm'
 import PaymentMethodSelector from '../components/PaymentMethodSelector'
 import CashAppPanel from '../components/CashAppPanel'
-import ZellePanel from '../components/ZellePanel'
-import ProgressBar from '../components/ProgressBar'
+import PayPalPanel from '../components/PayPalPanel'
 import { DONATIONS_PAYMENT } from '../lib/payment'
+import { submitNetlifyForm } from '../lib/netlifyForm'
 import zebraBg from '../assets/zebra_print_background.jpg'
 import zebraHeader from '../assets/zebra_header.png'
 
 const FUNDRAISER_GOAL = 1986
 const PRESETS = [10, 25, 50, 100]
 
+const DONATE_METHODS = [
+  { id: 'cashapp', label: 'Cash App' },
+  { id: 'paypal', label: 'PayPal' },
+]
+
 export default function Donate() {
-  const [verifiedTotal, setVerifiedTotal] = useState(0)
-
-  useEffect(() => {
-    if (!firebaseConfigured || !db) return
-    const q = query(
-      collection(db, 'donations'),
-      where('type', '==', 'fundraiser'),
-      where('status', '==', 'verified'),
-    )
-    const unsub = onSnapshot(q, (snap) => {
-      const total = snap.docs.reduce((sum, d) => sum + (Number(d.data().amount) || 0), 0)
-      setVerifiedTotal(total)
-    })
-    return unsub
-  }, [])
-
   return (
     <div className="pt-16">
       <Header />
@@ -56,7 +36,7 @@ export default function Donate() {
             icon={<Heart size={20} className="text-accent" />}
             description="Every dollar covers reunion logistics, the welcome reception, classmate scholarships, and the legacy gift to PBHS. Goal is a nod to our graduating year."
             ctaLabel="Submit Donation"
-            extra={<ProgressBar current={verifiedTotal} goal={FUNDRAISER_GOAL} label="Verified donations only" />}
+            extra={<GoalCard goal={FUNDRAISER_GOAL} />}
           />
 
           <DonationSection
@@ -69,6 +49,25 @@ export default function Donate() {
           />
         </div>
       </section>
+    </div>
+  )
+}
+
+function GoalCard({ goal }) {
+  return (
+    <div className="bg-white border border-gray-100 shadow-card rounded-2xl p-6 sm:p-7 flex items-center gap-4">
+      <div className="shrink-0 w-11 h-11 rounded-lg bg-accent/10 flex items-center justify-center">
+        <Target size={22} className="text-accent" />
+      </div>
+      <div>
+        <p className="text-xs font-body font-semibold uppercase tracking-widest text-accent mb-1">
+          Fundraising Goal
+        </p>
+        <p className="font-display font-bold text-2xl sm:text-3xl text-primary">
+          ${goal.toLocaleString()}
+        </p>
+        <p className="text-xs font-body text-muted">A nod to the Class of '86</p>
+      </div>
     </div>
   )
 }
@@ -108,21 +107,13 @@ function DonationSection({ type, badge, title, icon, description, ctaLabel, extr
       type,
       paymentMethod,
       confirmationNote: donor.confirmationNote?.trim() || '',
-      status: 'pending',
-      timestamp: serverTimestamp(),
-    }
-
-    if (!firebaseConfigured || !db) {
-      setSubmitError('Firebase is not configured. Add your Firebase env vars and reload.')
-      setSubmitting(false)
-      return
     }
 
     try {
-      await addDoc(collection(db, 'donations'), donation)
+      await submitNetlifyForm('donations', donation)
       setConfirmation(donation)
     } catch (err) {
-      setSubmitError(err?.message || 'Could not save your donation. Please try again.')
+      setSubmitError(err?.message || 'Could not submit your donation. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -139,11 +130,11 @@ function DonationSection({ type, badge, title, icon, description, ctaLabel, extr
         </h3>
         <p className="font-body text-sm text-muted mb-2 leading-relaxed">
           Your {type === 'fundraiser' ? 'donation' : 'auction contribution'} of{' '}
-          <span className="font-semibold text-primary">${confirmation.amount.toFixed(2)}</span> is <span className="font-semibold text-primary">pending</span>.
+          <span className="font-semibold text-primary">${confirmation.amount.toFixed(2)}</span> has been submitted.
         </p>
         <p className="font-body text-sm text-muted leading-relaxed">
-          We'll update the total once we verify your{' '}
-          {confirmation.paymentMethod === 'cashapp' ? 'Cash App' : 'Zelle'} payment.
+          We'll confirm once we verify your{' '}
+          {confirmation.paymentMethod === 'cashapp' ? 'Cash App' : 'PayPal'} payment.
         </p>
       </div>
     )
@@ -200,7 +191,11 @@ function DonationSection({ type, badge, title, icon, description, ctaLabel, extr
       </div>
 
       <div className="mb-5">
-        <PaymentMethodSelector value={paymentMethod} onChange={setPaymentMethod} />
+        <PaymentMethodSelector
+          methods={DONATE_METHODS}
+          value={paymentMethod}
+          onChange={setPaymentMethod}
+        />
       </div>
 
       <div className="mb-6">
@@ -212,9 +207,10 @@ function DonationSection({ type, badge, title, icon, description, ctaLabel, extr
             instruction="After sending payment, complete the form below to confirm your donation."
           />
         ) : (
-          <ZellePanel
-            contact={DONATIONS_PAYMENT.zelleContact}
-            instruction={`Open your banking app or Zelle app, send $${amount > 0 ? amount.toFixed(2) : '0.00'} to the contact above, then complete the form below to confirm your donation.`}
+          <PayPalPanel
+            handle={DONATIONS_PAYMENT.paypalMe}
+            amount={amount}
+            instruction="The button opens paypal.me with the amount prefilled. After paying, complete the form below to confirm your donation."
           />
         )}
       </div>

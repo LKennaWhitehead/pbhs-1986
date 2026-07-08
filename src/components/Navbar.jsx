@@ -17,6 +17,7 @@ export default function Navbar() {
     { to: '/events', label: 'Events' },
     { to: '/store', label: 'Store' },
     { to: '/donate', label: 'Donate' },
+    { to: '/contact', label: 'Contact' },
   ]
 
   const linkClass = ({ isActive }) =>

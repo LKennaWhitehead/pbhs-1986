@@ -7,6 +7,7 @@ import EventsPage from './pages/EventsPage'
 import RegisterPage from './pages/RegisterPage'
 import Store from './pages/Store'
 import Donate from './pages/Donate'
+import ContactPage from './pages/ContactPage'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/store" element={<Store />} />
             <Route path="/donate" element={<Donate />} />
+            <Route path="/contact" element={<ContactPage />} />
           </Routes>
         </main>
         <Footer />
