@@ -29,7 +29,7 @@ export const events = [
     day: 'saturday',
     dayLabel: 'Saturday · Oct 31',
     title: 'Day Party Brunch Celebration',
-    location: 'Pine Bluff Country Club · 1 Country Club Lane, Pine Bluff, AR 71603',
+    location: 'Pine Bluff Waterfront · 2700 Beachfront Drive, Pine Bluff, Arkansas 71602',
     time: '11:00 AM – 2:00 PM',
     attire: 'Black & White with a touch of Red',
     description:
@@ -41,7 +41,7 @@ export const events = [
     day: 'saturday',
     dayLabel: 'Saturday · Oct 31',
     title: 'Blue Jeans & Bling Celebration',
-    location: 'Venue TBD',
+    location: 'Pine Bluff Waterfront · 2700 Beachfront Drive, Pine Bluff, Arkansas 71602',
     time: '7:00 PM – 11:00 PM',
     attire: 'Blue Jeans & Bling',
     description:
